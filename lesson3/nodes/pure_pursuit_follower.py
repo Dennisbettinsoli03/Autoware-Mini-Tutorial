@@ -4,7 +4,7 @@ import numpy as np
 import rospy
 from threading import Lock
 
-from autoware_mini.msg import Path, VehicleCmd
+from autoware_mini.msg import Path, VehicleCommand
 from geometry_msgs.msg import PoseStamped
 from tf.transformations import euler_from_quaternion
 
@@ -26,7 +26,7 @@ class PurePursuitFollower:
         self.distance_to_velocity_interpolator = None
 
         # Publishers
-        # TODO 2: Create a publisher for '/control/vehicle_cmd' topic with VehicleCmd message type.
+        # TODO 2: Create a publisher for '/control/vehicle_cmd' topic with VehicleCommand message type.
         #         self.vehicle_cmd_pub = rospy.Publisher(...)
 
         # Subscribers
@@ -84,7 +84,7 @@ class PurePursuitFollower:
             #         at the ego vehicle's position on the path. Replace the constant
             #         linear_velocity with the interpolated value.
 
-        # TODO 2: Create and publish a VehicleCmd message with constant steering angle and velocity for testing.
+        # TODO 2: Create and publish a VehicleCommand message with constant steering angle and velocity for testing.
 
     def run(self):
         rospy.spin()
