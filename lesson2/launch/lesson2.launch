@@ -5,9 +5,11 @@
     <arg name="interval"        default="1.0"                 doc="Distance between recorded waypoints" />
     <arg name="waypoints_file"  default="waypoints_1m.csv"    doc="waypoints file name" />
 
+    <param name="/use_sim_time" value="true" />
+
     <!-- Nodes -->
     <!-- Play rosbag -->
-    <node pkg="rosbag" type="play" name="player" required="true" args="$(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" />
+    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" />
 
     <!-- Localizer -->
     <group ns="localization">

@@ -21,6 +21,7 @@
         <node pkg="autoware_mini" type="lanelet2_map_visualizer.py" name="lanelet2_map_visualizer" output="screen" required="true" >
             <param name="lanelet2_map_path"  value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
             <param name="enable_auto_stop_checker" value="$(arg enable_auto_stop_checker)" />
+            <param name="enable_road_closures" value="false" />
         </node>
 
         <rosparam command="load" file="$(find autoware_mini_tutorial)/shared/config/planning.yaml"/>

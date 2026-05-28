@@ -29,7 +29,6 @@ Before writing any code, launch the system and explore how the detection pipelin
   - Switch between `TopDownFollow` and `ThirdPersonFollow` views to compare the different stages
   - Hint: press space in the launch console to pause bag playback for easier inspection
 
-OUTDATED
 ![rviz](images/rviz.png)
 
 * Run `rqt_graph` (`Nodes/Topics (all)` option) to see how the pipeline nodes are connected. Note how `/player` publishes `/lidar_center/points_raw`, which flows through ground removal and filtering — your `points_clusterer` node will connect after the filter. With `use_detection:=false`, the clusterer and detector nodes are not shown — they will appear once you launch without the flag.
@@ -69,7 +68,9 @@ labels = self.clusterer.fit_predict(points)
 * Add a temporary `print(points.shape, labels.shape)` after the clustering to verify the output. * `roslaunch autoware_mini_tutorial lesson5.launch`
 * You should see matching shapes like:
 ```
-(OUTDATED - will be re-recorded with new bag)
+(7330, 3) (7330,)
+(7289, 3) (7289,)
+(7297, 3) (7297,)
 ```
 * Remove the print statement before continuing.
 
@@ -105,7 +106,6 @@ data = unstructured_to_structured(points_labeled, dtype=np.dtype([
 * Run `rostopic hz /detection/lidar/points_clustered` — the average rate should be close to 10Hz.
 * In RViz, enable `Points clustered` — clusters should be displayed with different colors.
 
-* OUTDATED
 ![point_clouds_comparison](images/point_clouds_comparison.png)
 
 ## 3. Create detected objects

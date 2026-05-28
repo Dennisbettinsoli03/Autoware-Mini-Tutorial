@@ -32,7 +32,7 @@ Find `TODO 1` in `current_pose_callback` and add: `print(msg.pose.position.x, ms
    - The launch file loads waypoints (uses default file name) created in lesson 2 and visualizes them in RViz (path with waypoints, blinker information, and speed values at the waypoints).
    - If you don't have a waypoint file, you can create one by running `roslaunch autoware_mini_tutorial lesson2.launch`. The assumption is that you have finalized your localizer node in lesson 2.
 * The path should be visualized, and no error messages in the console.
-* If you are printing out `current_pose`, the output should start with `x: 0.0, y: 0.0`. When placed near the path start using `2D Pose Estimate`, coordinates should be close to the following - `OUTDATED x: 266.7159118652344, y: -894.0006713867188`.
+* If you are printing out `current_pose`, the output should start with `x: 0.0, y: 0.0`. When placed near the path start using `2D Pose Estimate`, coordinates should be close to the following - `x: 10.0, y: -649.6`.
 
 ![loaded waypoints](images/load_practice_3.png)
 
@@ -46,24 +46,24 @@ In this step, we will publish constant values to confirm that the ego vehicle wi
 ##### Instructions
 Find `TODO 2` in `pure_pursuit_follower.py` — it appears in two places:
 
-1. In `__init__`: Create a publisher for the vehicle command topic `/control/vehicle_cmd` with message type `VehicleCmd`.
+1. In `__init__`: Create a publisher for the vehicle command topic `/control/vehicle_cmd` with message type `VehicleCommand`.
 
 2. In `current_pose_callback`: Find the `TODO 2` block at the bottom (outside the if/else). Complete the vehicle command publishing code:
 
 ```python
-vehicle_cmd = VehicleCmd()
+vehicle_cmd = VehicleCommand()
 vehicle_cmd.header.stamp = msg.header.stamp
 vehicle_cmd.header.frame_id = "base_link"
-vehicle_cmd.ctrl_cmd.steering_angle = 0.2
-vehicle_cmd.ctrl_cmd.linear_velocity = 10
-vehicle_cmd.ctrl_cmd.linear_acceleration = 0
+vehicle_cmd.steering_angle = 0.2
+vehicle_cmd.speed = 10
+vehicle_cmd.acceleration = 0
 self.vehicle_cmd_pub.publish(vehicle_cmd)
 ```
 
 ##### Validation
 * `roslaunch autoware_mini_tutorial lesson3.launch`
 * Place a `2D Pose Estimate` close to the path, and the ego vehicle should drive in a circular pattern.
-* Run `rostopic echo /control/vehicle_cmd/ctrl_cmd` to verify what commands are actually published.
+* Run `rostopic echo /control/vehicle_cmd` to verify what commands are actually published.
 * Run [`rqt_graph`](http://wiki.ros.org/rqt_graph) (`Nodes_only` option selected) — you should see a cycle: `/control/pure_pursuit_follower -> /control/vehicle_cmd -> /vehicle/bicycle_simulation -> /localization/current_pose -> /pure_pursuit_follower`
 
 ![node graph](images/node_graph_task_4.png)

@@ -15,7 +15,7 @@
     <param name="/use_sim_time" value="true" />
 
     <!-- Play back bag -->
-    <node pkg="rosbag" type="play" name="player" required="true" args="$(find autoware_mini)/data/bags/$(arg bag_file) --clock --queue=1" />
+    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" />
 
     <!-- Localization -->
     <group ns="localization">
@@ -29,6 +29,7 @@
         <node pkg="autoware_mini" type="lanelet2_map_visualizer.py" name="lanelet2_map_visualizer" output="screen" required="true">
             <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
             <param name="enable_auto_stop_checker" value="$(arg enable_auto_stop_checker)" />
+            <param name="enable_road_closures" value="false" />
         </node>
 
         <!-- Lanelet2 global planner -->
