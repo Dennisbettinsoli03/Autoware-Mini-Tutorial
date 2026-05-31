@@ -29,7 +29,7 @@ local_path_extractor:
   publish_rate: 10                        # Hz
   lookahead_distance: 10                  # m
   distance_to_lookahead_path_limit: 2.5   # m
-collision_points_manager:
+simple_collision_checker:
   braking_safety_distance_obstacle: 4     # m
   braking_safety_distance_goal: 0.1       # m
   braking_safety_distance_stopline: 2     # m
