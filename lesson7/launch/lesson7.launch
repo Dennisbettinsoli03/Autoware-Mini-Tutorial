@@ -1,16 +1,12 @@
 <?xml version="1.0"?>
 <launch>
-    
+
     <arg name="bag_file"                default="2023-05-25-14-21-10_sensors_Raekoda.bag" />
     <arg name="speed_limit"             default="40" />
     <arg name="lanelet2_map_name"       default="tartu_demo.osm" />
-    <arg name="use_localization"        default="true" />
-    <arg name="use_planning"            default="true" />
-    <arg name="use_detection"           default="true" />
-    <arg name="use_control"             default="true" />
-    <arg name="use_tracking"            default="false" />
-    <arg name="use_local_planner"       default="true" />
+    <arg name="use_tracking"            default="true" />
     <arg name="enable_auto_stop_checker" default="true"         doc="enable auto stop checker" />
+    <arg name="onnx_path"               default="$(find autoware_mini)/data/models/traffic_lights/yolov11_tfl.onnx" doc="yolo model path" />
 
 
     <!-- Use simulation time from bag -->
@@ -32,7 +28,7 @@
 
         <rosparam command="load" file="$(find autoware_mini_tutorial)/shared/config/localization.yaml" />
     </group>
-    
+
     <!-- Planning -->
     <group ns="planning">
 
@@ -57,7 +53,6 @@
             <node pkg="autoware_mini_tutorial" type="local_path_extractor.py" name="local_path_extractor" output="screen" required="true" />
 
             <node pkg="autoware_mini_tutorial" type="simple_collision_checker.py" name="simple_collision_checker" output="screen" required="true">
-                <!-- map path is needed for the traffic light stop lines added in lesson 7 -->
                 <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
             </node>
 
@@ -67,6 +62,12 @@
         <node pkg="autoware_mini" type="local_path_visualizer.py" name="local_path_visualizer" output="screen" required="true">
             <param name="use_swerving" value="false" />
             <remap from="local_path" to="visualized_path" />
+        </node>
+
+        <!-- Stop line status visualizer -->
+        <node pkg="autoware_mini" type="stop_line_status_visualizer.py" name="stop_line_status_visualizer" output="screen" required="true">
+            <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+            <remap from="stop_line_status" to="/detection/traffic_light_status" />
         </node>
 
         <!-- Config -->
@@ -112,6 +113,25 @@
             <remap from="detected_objects_markers" to="final_objects_markers" />
         </node>
 
+        <!-- Camera based traffic light detection -->
+        <!-- Camera FL -->
+        <node pkg="autoware_mini_tutorial" type="yolo_traffic_light_detector.py" name="yolo_traffic_light_detector" output="screen" required="true" ns="camera1">
+            <remap from="camera_info" to="/camera_fl/camera_info"/>
+            <remap from="image_raw" to="/camera_fl/image_raw"/>
+            <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+            <param name="onnx_path" value="$(arg onnx_path)" />
+        </node>
+
+        <!-- Camera FR -->
+        <node pkg="autoware_mini_tutorial" type="yolo_traffic_light_detector.py" name="yolo_traffic_light_detector" output="screen" required="true" ns="camera2">
+            <remap from="camera_info" to="/camera_fr/camera_info"/>
+            <remap from="image_raw" to="/camera_fr/image_raw"/>
+            <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+            <param name="onnx_path" value="$(arg onnx_path)" />
+        </node>
+
+        <!-- Merge statuses from the two cameras -->
+        <node pkg="autoware_mini" type="traffic_light_majority_merger.py" name="traffic_light_majority_merger" output="screen" required="true" />
 
         <rosparam command="load" file="$(find autoware_mini_tutorial)/shared/config/detection.yaml"/>
 
@@ -146,6 +166,6 @@
         <remap from="/planning/local_path" to="/planning/visualized_path" />
         <include file="$(find autoware_mini)/launch/dashboard.launch" />
     </group>
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find autoware_mini_tutorial)/lesson6/rviz/lesson6.rviz" required="true" />
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find autoware_mini_tutorial)/lesson7/rviz/lesson7.rviz" required="true" />
 
 </launch>

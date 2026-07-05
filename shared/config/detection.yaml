@@ -46,30 +46,25 @@ ema_tracker:
   update_heading_bboxes: True
   update_heading_bboxes_min_speed: 0.7         # m/s min speed to perform heading and bbox update
 
-mqtt_traffic_light_detector:
-  mqtt_host: traffic.traffest.com
-  mqtt_port: 8883
-  mqtt_topic: Tartu/#
-  enable_automatic_subscribe: True
-  automatic_subscription_range: 200
-  timeout: 2.0
-  id_string: " mqtt"      # string added to traffic light result and displayed in rviz
-
 traffic_light_majority_merger:
   id_string: " cam"      # string added to traffic light result and displayed in rviz
 
 camera1:
-  camera_traffic_light_detector:
+  yolo_traffic_light_detector:
     roi_width_extent: 0.65  # ROI box width extension amount in meters
-    roi_height_extent: 0.55  # ROI box heigth extension amount in meters
+    roi_height_extent: 0.55  # ROI box height extension amount in meters
     min_roi_width: 50  # minimum ROI width in pixels, when classification makes sense
     rectify_image: False  # the distortions of Mako cameras are so small they don't matter
     transform_timeout: 0.06
+    iou_threshold: 0.05  # minimum IOU for matching a YOLO detection with a map ROI
+    camera_delay_compensation: 0.03  # s - camera image delay compared to the car position
 
 camera2:
-  camera_traffic_light_detector:
+  yolo_traffic_light_detector:
     roi_width_extent: 0.65  # ROI box width extension amount in meters
-    roi_height_extent: 0.55  # ROI box heigth extension amount in meters
+    roi_height_extent: 0.55  # ROI box height extension amount in meters
     min_roi_width: 50  # minimum ROI width in pixels, when classification makes sense
     rectify_image: False  # the distortions of Mako cameras are so small they don't matter
     transform_timeout: 0.06
+    iou_threshold: 0.05  # minimum IOU for matching a YOLO detection with a map ROI
+    camera_delay_compensation: 0.03  # s - camera image delay compared to the car position

@@ -32,13 +32,13 @@ class SimpleCollisionChecker:
         self.stopped_speed_limit = rospy.get_param("stopped_speed_limit")
         self.braking_safety_distance_obstacle = rospy.get_param("~braking_safety_distance_obstacle")
         self.braking_safety_distance_goal = rospy.get_param("~braking_safety_distance_goal")
-        # lesson 7: add braking_safety_distance_stopline parameter
-        # lesson 7: load lanelet2 map and extract stop lines with traffic lights
+        # TODO 8 (lesson 7): add braking_safety_distance_stopline parameter,
+        #                    load the lanelet2 map and extract the stop lines with traffic lights
 
         # Variables
         self.detected_objects = None
         self.goal_point = None
-        # lesson 7: add stopline_statuses dict
+        # TODO 8 (lesson 7): add stopline_statuses dict
 
         # Lock for thread safety
         self.lock = threading.Lock()
@@ -50,7 +50,7 @@ class SimpleCollisionChecker:
         rospy.Subscriber('extracted_local_path', Path, self.path_callback, queue_size=1, tcp_nodelay=True)
         rospy.Subscriber('/detection/final_objects', DetectedObjectArray, self.detected_objects_callback, queue_size=1, buff_size=2**20, tcp_nodelay=True)
         rospy.Subscriber('global_path', Path, self.global_path_callback, queue_size=None, tcp_nodelay=True)
-        # lesson 7: add traffic_light_status subscriber
+        # TODO 8 (lesson 7): add traffic_light_status subscriber
 
         rospy.loginfo("%s - initialized", rospy.get_name())
 
@@ -88,7 +88,7 @@ class SimpleCollisionChecker:
         #         - If so, append it as a collision point with category=1, zero velocity,
         #           distance_to_stop=braking_safety_distance_goal
 
-        # lesson 7: add stop line collision points for red traffic lights
+        # TODO 9 (lesson 7): add stop line collision points for red traffic lights
 
         # Publish the collision points (an empty array means no collision points on the path)
         if len(collision_points) > 0:
