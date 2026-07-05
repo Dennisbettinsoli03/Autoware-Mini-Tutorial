@@ -11,13 +11,13 @@
     <arg name="use_tracking"            default="false" />
     <arg name="use_local_planner"       default="true" />
     <arg name="enable_auto_stop_checker" default="true"         doc="enable auto stop checker" />
-    <arg name="use_extracted_local_path" default="false"       doc="use local extracted path for controller" />
 
     <!-- Bicycle_model simulator -->
     <group ns="vehicle">
         <!-- Bicycle_model simulator -->
         <node pkg="autoware_mini" type="bicycle_simulation.py" name="bicycle_simulation" output="screen" required="true">
             <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+            <param name="broadcast_tf"      value="true" />
         </node>
 
         <rosparam command="load" file="$(find autoware_mini)/config/vehicle.yaml" />
@@ -59,8 +59,8 @@
         </group>
         <!-- Local path visualizer -->
         <node pkg="autoware_mini" type="local_path_visualizer.py" name="local_path_visualizer" output="screen" required="true">
-            <remap unless="$(arg use_extracted_local_path)" from="local_path" to="/planning/local_path" />
-            <remap if="$(arg use_extracted_local_path)" from="local_path" to="/planning/extracted_local_path" />
+            <param name="use_swerving" value="false" />
+            <remap from="local_path" to="visualized_path" />
         </node>
 
         <!-- Config -->
@@ -88,8 +88,7 @@
     <group ns="control">
         <!-- Follower -->
         <node pkg="autoware_mini_tutorial" type="pure_pursuit_follower.py" name="pure_pursuit_follower" output="screen" required="true" >
-            <remap unless="$(arg use_extracted_local_path)" from="path" to="/planning/local_path" />
-            <remap if="$(arg use_extracted_local_path)" from="path" to="/planning/extracted_local_path" />
+            <remap from="path" to="/planning/local_path" />
         </node>
 
         <rosparam command="load" file="$(find autoware_mini_tutorial)/shared/config/control.yaml"/>
@@ -106,8 +105,11 @@
 	    <node pkg="robot_state_publisher" type="robot_state_publisher" name="lexus_model_state_publisher" output="screen" required="true" />
     </group>
 
-    <!-- Rviz -->
-    <include file="$(find autoware_mini)/launch/dashboard.launch" />
+    <!-- Dashboard (the dashboard reads the visualization-only path topic) -->
+    <group>
+        <remap from="/planning/local_path" to="/planning/visualized_path" />
+        <include file="$(find autoware_mini)/launch/dashboard.launch" />
+    </group>
     <node type="rviz" name="rviz" pkg="rviz" args="-d $(find autoware_mini_tutorial)/lesson6/rviz/lesson6.rviz" required="true" />
 
 </launch>

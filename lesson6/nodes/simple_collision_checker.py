@@ -80,19 +80,23 @@ class SimpleCollisionChecker:
         #         - Create a Shapely LineString from the local path waypoints
         #         - Buffer it with safety_box_width / 2 (cap_style="flat")
         #         - If detected_objects is not None and not empty, iterate over them
-        #           and create collision points from their intersections with the buffered path
-        #         - Publish the collision points as a PointCloud2 message with msgify
-        #           and set the header from the input message
+        #           and add collision points from their intersections with the buffered path
+        #           to the collision_points array
 
         # TODO 7: Add goal point as collision point.
         #         - Check if goal_point is within the buffered local path
         #         - If so, append it as a collision point with category=1, zero velocity,
         #           distance_to_stop=braking_safety_distance_goal
-        #         - Publish collision points after all checks (obstacles + goal)
 
         # lesson 7: add stop line collision points for red traffic lights
 
-        pass
+        # Publish the collision points (an empty array means no collision points on the path)
+        if len(collision_points) > 0:
+            collision_points_msg = msgify(PointCloud2, collision_points)
+        else:
+            collision_points_msg = PointCloud2()
+        collision_points_msg.header = msg.header
+        self.collision_points_pub.publish(collision_points_msg)
 
     def run(self):
         rospy.spin()

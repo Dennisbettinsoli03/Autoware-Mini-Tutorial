@@ -9,7 +9,7 @@ import numpy as np
 import threading
 from numpy.lib.recfunctions import structured_to_unstructured
 from ros_numpy import numpify
-from autoware_mini.msg import Path
+from autoware_mini.msg import Path, LocalPath
 from sensor_msgs.msg import PointCloud2
 from geometry_msgs.msg import PoseStamped, TwistStamped, Vector3
 
@@ -34,6 +34,7 @@ class SimpleSpeedPlanner:
 
         # Publishers
         self.local_path_pub = rospy.Publisher('local_path', Path, queue_size=1, tcp_nodelay=True)
+        self.visualized_path_pub = rospy.Publisher('visualized_path', LocalPath, queue_size=1, tcp_nodelay=True)
 
         # Subscribers
         rospy.Subscriber('/localization/current_pose', PoseStamped, self.current_pose_callback, queue_size=1, tcp_nodelay=True)
@@ -65,7 +66,8 @@ class SimpleSpeedPlanner:
                 return
 
             if len(local_path_msg.waypoints) == 0 or len(collision_points) == 0:
-                self.local_path_pub.publish(local_path_msg)
+                # no local path or no collision points means no alterations to the path
+                self.publish_local_path(local_path_msg)
                 return
 
             # Create local path linestring
@@ -76,17 +78,16 @@ class SimpleSpeedPlanner:
             collision_points_shapely = shapely.points(structured_to_unstructured(collision_points[['x', 'y', 'z']]))
             collision_point_distances = np.array([local_path_linestring.project(cp) for cp in collision_points_shapely])
 
-            # TODO 2: Calculate target velocity and publish modified local path.
+            # TODO 2: Calculate target velocity and modify the local path waypoint speeds.
             #         - Calculate target velocity for each collision point using:
             #           v = sqrt(2 * default_deceleration * distance)
             #         - Find the minimum target velocity
             #         - Overwrite waypoint speeds: wp.speed = min(target_velocity, wp.speed)
-            #         - Create a new Path message with the modified waypoints and publish it with correct metadata
 
             # TODO 3: Add braking safety distance.
             #         - Subtract distance_to_car_front from collision_point_distances
             #         - Subtract distance_to_stop (from collision points) from distances
-            #         - Update closest_object_distance and stopping_point_distance accordingly
+            #         - Update target_object_distance and stopping_point_distance accordingly
 
             # TODO 4: Calculate collision point speed.
             #         - For each collision point, get the path heading at that distance
@@ -98,16 +99,31 @@ class SimpleSpeedPlanner:
             #         - Use full formula: v = max(0, approaching_speed + sqrt(max(0, v0^2 + 2*a*s)))
             #           where approaching_speed = min(v0, 0) handles objects moving toward us
             #         - Find the collision point with the minimum target velocity (not just closest)
-            #         - Set closest_object_velocity from the collision point velocities
+            #         - Set target_object_speed from the collision point speeds
 
             # TODO 6: Modify target velocity with reaction time.
-            #         - Subtract braking_reaction_time * abs(collision_point_velocities)
+            #         - Subtract braking_reaction_time * abs(collision_point_speeds)
             #           from target distances
 
-            pass
+            # Publishing the modified local path goes below all the TODOs.
+            # In TODO 2, create the modified Path message here and pass it to
+            # self.publish_local_path() together with the calculated metadata;
+            # the later TODOs only refine these values.
 
         except Exception as e:
             rospy.logerr_throttle(10, "%s - Exception in callback: %s", rospy.get_name(), traceback.format_exc())
+
+    def publish_local_path(self, path, target_object_distance=0.0, target_object_speed=0.0,
+                           stopping_point_distance=0.0, collision_point_category=0, is_blocked=False):
+        # Publish the path for the controller
+        self.local_path_pub.publish(path)
+        # Convert to the LocalPath message used by the autoware_mini visualization and dashboard nodes
+        self.visualized_path_pub.publish(LocalPath(header=path.header, waypoints=path.waypoints,
+                                                   target_object_distance=float(target_object_distance),
+                                                   target_object_speed=float(target_object_speed),
+                                                   stopping_point_distance=float(stopping_point_distance),
+                                                   collision_point_category=int(collision_point_category),
+                                                   is_blocked=bool(is_blocked)))
 
     @staticmethod
     def get_heading_at_distance(linestring, distance):

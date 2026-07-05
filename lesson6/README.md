@@ -30,10 +30,10 @@ Before writing any code, explore the provided [`lesson6/nodes/local_path_extract
   - What happens when an empty global path is received vs. a non-empty one
 
 ##### Validation
-* `roslaunch autoware_mini_tutorial lesson6_sim.launch use_extracted_local_path:=true`
+* `roslaunch autoware_mini_tutorial lesson6_sim.launch`
 * Place a destination — the global path and extracted local path should appear. The ego vehicle starts to drive.
 * Run `rostopic hz /planning/extracted_local_path` in a separate terminal to verify it publishes at ~10 Hz.
-* The `use_extracted_local_path:=true` flag routes the extracted local path directly to the controller, bypassing your collision checker and speed planner nodes.
+* Note that the whole pipeline already works end-to-end: (skeleton) collision checker publishes an empty collision points array, the speed planner passes the extracted local path through unmodified, and the controller follows it. The ego vehicle drives to the destination but ignores obstacles.
 
 
 ## 1. Create obstacle collision points
@@ -57,7 +57,7 @@ local_path_buffer = local_path_linestring.buffer(self.safety_box_width / 2, cap_
 shapely.prepare(local_path_buffer)
 ```
 
-2. Check if detected objects are available and iterate over them. For each object, create a Shapely Polygon from its convex hull, check intersection, and create collision points:
+2. Check if detected objects are available and iterate over them. For each object, create a Shapely Polygon from its convex hull, check intersection with the buffered path, and append a collision point for every point of the intersection geometry:
 
 ```python
 if detected_objects is not None and len(detected_objects) > 0:
@@ -65,26 +65,23 @@ if detected_objects is not None and len(detected_objects) > 0:
         object_polygon = shapely.Polygon(...)
 
         if local_path_buffer.intersects(object_polygon):
-            # TODO: calculate the collision point properties from the intersection points geometry and object metadata
-            
+            # Calculate the intersection geometry and create a collision point from each
+            # of its coordinates, filling in the rest of the DTYPE fields from the object
+            # metadata.
+                        
             for x, y in intersection_points:
                 collision_points = np.append(collision_points, np.array([(...
                     )], dtype=DTYPE))
 ```
 
-3. After the loop, publish the collision points:
-
-```python
-collision_points_msg = msgify(PointCloud2, collision_points)
-collision_points_msg.header = msg.header
-self.collision_points_pub.publish(collision_points_msg)
-```
+3. The publishing of the collision points is already provided at the bottom of the callback — an empty array simply means there are no collision points on the path. Your code only needs to fill the `collision_points` array.
 
 ##### Validation
 * Add a temporary printout of the collision points array for debugging.
 * `roslaunch autoware_mini_tutorial lesson6_sim.launch`
 * Place the destination and place simulated obstacles on the path using the RViz `Publish Point` button.
 * You should see collision points printed with correct coordinates, velocities (0 for simulated objects), and categories.
+* Enable the `Planning / Collision points` display in RViz — the collision points should appear as colored spheres where objects intersect the path.
 * Experiment with placing obstacles at the edge of the local path buffer.
 * Remove the printout before continuing.
 
@@ -98,6 +95,9 @@ The skeleton already provides:
 - Early returns for missing data and empty inputs
 - The local path linestring and collision point distance projection
 - Two helper functions: `get_heading_at_distance` and `project_vector_to_heading` (used in later sections)
+- The `publish_local_path` helper
+
+The output of the speed planner is the modified `Path` together with metadata about the blocking collision point: `target_object_distance`, `target_object_speed`, `stopping_point_distance`, `collision_point_category`, and `is_blocked`. All of these are passed to the provided `publish_local_path()` helper, which forwards the path to your `pure_pursuit_follower` from lesson 3.
 
 For now, assume all collision points are static (velocity = 0). The target velocity formula simplifies to:
 
@@ -128,21 +128,21 @@ for i, wp in enumerate(local_path_msg.waypoints):
     wp.speed = min(target_velocity, wp.speed)
 ```
 
-3. Publish the modified path:
+3. Create the modified path and publish it with the helper. **Note that the publishing goes below all the TODOs**:
 
 ```python
-closest_object_distance = collision_point_distances[np.argmin(calculated_target_velocities)]
+target_object_distance = collision_point_distances[np.argmin(calculated_target_velocities)]
 collision_point_category = collision_points[np.argmin(calculated_target_velocities)]["category"]
 
 path = Path()
 path.header = local_path_msg.header
 path.waypoints = local_path_msg.waypoints
-path.closest_object_distance = closest_object_distance
-path.closest_object_velocity = 0
-path.is_blocked = True
-path.stopping_point_distance = closest_object_distance
-path.collision_point_category = collision_point_category
-self.local_path_pub.publish(path)
+self.publish_local_path(path,
+                        target_object_distance=target_object_distance,
+                        target_object_speed=0,
+                        stopping_point_distance=target_object_distance,
+                        collision_point_category=collision_point_category,
+                        is_blocked=True)
 ```
 
 ##### Validation
@@ -171,13 +171,13 @@ collision_point_braking_distances = ...
 target_distances = collision_point_distances - ...
 ```
 
-Use `target_distances` instead of raw `collision_point_distances` in the target velocity formula. Update `closest_object_distance` to subtract `distance_to_car_front`, and `stopping_point_distance` to subtract `collision_point_braking_distances`.
+Use `target_distances` instead of raw `collision_point_distances` in the target velocity formula. Update `target_object_distance` to subtract `distance_to_car_front`, and `stopping_point_distance` to subtract `collision_point_braking_distances`.
 
 ##### Validation
 * `roslaunch autoware_mini_tutorial lesson6_sim.launch`
 * Place obstacles on the path.
 * The ego vehicle should now stop so that its front touches the stopping point (red wall).
-* `closest_object_distance` should show a value close to `braking_safety_distance_obstacle`.
+* `target_object_distance` should show a value close to `braking_safety_distance_obstacle`.
 
 ![rviz_stopped_distances](images/rviz_stopped_distances.png)
 
@@ -193,18 +193,26 @@ Find `TODO 4`:
 
 ```python
 collision_point_path_headings = [self.get_heading_at_distance(local_path_linestring, d) for d in collision_point_distances]
-collision_point_velocities = np.array([self.project_vector_to_heading(heading, Vector3(vx, vy, vz))
+collision_point_speeds = np.array([self.project_vector_to_heading(heading, Vector3(vx, vy, vz))
                             for heading, (vx, vy, vz) in zip(collision_point_path_headings, collision_points[['vx', 'vy', 'vz']])])
 ```
 
 2. Add a temporary printout comparing object speed (norm) with projected speed.
 
-##### Validation (OUTDATED — values will differ with new bag)
+##### Validation
 * `roslaunch autoware_mini_tutorial lesson6_bag.launch use_tracking:=true`
 * Set the goal point further away. There should be intersecting objects with non-zero velocities.
-* The printout should show object speed and projected speed converging when driving directions align.
+* The printout should show object speed and projected speed converging when driving directions align:
 
-![velocity_vectors](images/velocity_difference.png)
+```
+object speed: 0.58 m/s, projected speed: 0.07 m/s    <- object moving across the path
+object speed: 0.00 m/s, projected speed: 0.00 m/s    <- static object
+object speed: 9.81 m/s, projected speed: 9.81 m/s    <- object driving along the path
+```
+
+* Note that the `Target obj spd` graph on the dashboard still shows 0 — the projected speeds are used in the target velocity calculation only in the next section.
+
+![projected_speed](images/rviz_projected_speed.png)
 
 
 ## 5. Account for collision point speed
@@ -217,30 +225,37 @@ Find `TODO 5`:
 1. Use the full formula with collision point velocities. For objects moving toward us (negative projected speed), we use `approaching_speed = min(v0, 0)` added outside the square root:
 
 ```python
-approaching_speeds = np.minimum(collision_point_velocities, 0)
+approaching_speeds = np.minimum(collision_point_speeds, 0)
 calculated_target_velocities = np.maximum(0,
     approaching_speeds + np.sqrt(np.maximum(0,
-        collision_point_velocities ** 2 + 2 * self.default_deceleration * target_distances)))
+        collision_point_speeds ** 2 + 2 * self.default_deceleration * target_distances)))
 ```
 
 2. Find the collision point with the minimum target velocity and update all metadata:
 
 ```python
-closest_object_distance = ... # calculated from the car nose to the collision point, including braking distance
-closest_object_velocity = ...
-closest_object_braking = ...
+target_object_distance = ... # calculated from the car nose to the collision point, including braking distance
+target_object_speed = ...
+collision_point_braking_distance = ...
 collision_point_category = ...
 stopping_point_distance = ... # calculated from the base link to the stopping point
 target_velocity = ...
 ```
 
-3. Update the published path to use `closest_object_velocity` instead of 0.
+3. Pass `target_object_speed` to the publishing helper instead of 0.
 
-##### Validation (OUTDATED — values will differ with new bag)
+##### Validation
 * Run with and without tracking to compare:
   - `roslaunch autoware_mini_tutorial lesson6_bag.launch`
   - `roslaunch autoware_mini_tutorial lesson6_bag.launch use_tracking:=true`
-* With tracking, the target velocity drop should be smaller when following a moving object.
+* Set the goal point further away. 
+* With tracking, the target velocity curve should increase sharper as obstacle ahead starts moving near first crosswalk, and the `Target obj spd` graph shows the speed of the blocking object.
+
+Without tracking:
+
+![comparison_no_tracking](images/comparison_no_tracking.png)
+
+With tracking:
 
 ![comparison_tracking](images/comparison_tracking.png)
 
@@ -279,8 +294,6 @@ if goal_point is not None:
             [(...
               )], dtype=DTYPE))
 ```
-
-Make sure to publish collision points after all checks (obstacles + goal).
 
 ##### Validation
 * `roslaunch autoware_mini_tutorial lesson6_sim.launch`

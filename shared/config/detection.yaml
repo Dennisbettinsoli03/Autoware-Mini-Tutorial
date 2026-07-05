@@ -44,6 +44,7 @@ ema_tracker:
   association_method: iou   # iou, euclidean
   max_euclidean_distance: 2.0
   update_heading_bboxes: True
+  update_heading_bboxes_min_speed: 0.7         # m/s min speed to perform heading and bbox update
 
 mqtt_traffic_light_detector:
   mqtt_host: traffic.traffest.com

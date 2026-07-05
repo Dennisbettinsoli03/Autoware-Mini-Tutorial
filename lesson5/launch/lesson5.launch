@@ -18,6 +18,10 @@
     <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" >
         <!-- The bag already contains recorded map->base_link transforms, remap them so they don't conflict with the transform published by the localizer -->
         <remap from="/tf" to="/tf_recorded" />
+        <!-- The recorded static transforms are also provided by the URDF publishers (with up-to-date values), remap to avoid conflicts -->
+        <remap from="/tf_static" to="/tf_static_recorded" />
+        <!-- The bag also contains the recorded destination click, keep it off the live goal topic -->
+        <remap from="/move_base_simple/goal" to="/move_base_simple/goal_recorded" />
     </node>
 
     <!-- Localization -->

@@ -17,7 +17,14 @@
     <param name="/use_sim_time" value="true" />
 
     <!-- Play back bag -->
-    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" />
+    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" >
+        <!-- The bag already contains recorded map->base_link transforms, remap them so they don't conflict with the transform published by the localizer -->
+        <remap from="/tf" to="/tf_recorded" />
+        <!-- The recorded static transforms are also provided by the URDF publishers (with up-to-date values), remap to avoid conflicts -->
+        <remap from="/tf_static" to="/tf_static_recorded" />
+        <!-- The bag also contains the recorded destination click, keep it off the live goal topic -->
+        <remap from="/move_base_simple/goal" to="/move_base_simple/goal_recorded" />
+    </node>
 
      <!-- Localization -->
     <group ns="localization">
@@ -54,7 +61,10 @@
             <node pkg="autoware_mini_tutorial" type="simple_speed_planner.py" name="simple_speed_planner" output="screen" required="true" />
         </group>
         <!-- Local path visualizer -->
-        <node pkg="autoware_mini" type="local_path_visualizer.py" name="local_path_visualizer" output="screen" required="true"/>
+        <node pkg="autoware_mini" type="local_path_visualizer.py" name="local_path_visualizer" output="screen" required="true">
+            <param name="use_swerving" value="false" />
+            <remap from="local_path" to="visualized_path" />
+        </node>
 
         <!-- Config -->
         <rosparam command="load" file="$(find autoware_mini_tutorial)/shared/config/planning.yaml" />
@@ -128,7 +138,11 @@
     </group>
 
     <!-- Rviz -->
-    <include file="$(find autoware_mini)/launch/dashboard.launch" />
+    <!-- Dashboard (the dashboard reads the visualization-only path topic) -->
+    <group>
+        <remap from="/planning/local_path" to="/planning/visualized_path" />
+        <include file="$(find autoware_mini)/launch/dashboard.launch" />
+    </group>
     <node type="rviz" name="rviz" pkg="rviz" args="-d $(find autoware_mini_tutorial)/lesson6/rviz/lesson6.rviz" required="true" />
 
 </launch>

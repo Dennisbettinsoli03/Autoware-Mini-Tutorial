@@ -82,14 +82,6 @@ class LocalPathExtractor:
                 self.local_path_pub.publish(local_path)
                 return
 
-            current_position = None
-
-            ego_distance_from_global_path_start = None
-
-            global_path_distances = None
-
-            global_path_velocities_interpolator = None
-
             current_position = shapely.Point(current_pose.pose.position.x, current_pose.pose.position.y,
                                              current_pose.pose.position.z)
 
