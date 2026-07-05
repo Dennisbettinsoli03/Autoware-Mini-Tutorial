@@ -64,9 +64,9 @@ self.graph = lanelet2.routing.RoutingGraph(self.lanelet2_map, traffic_rules)
 2. In `goal_callback`: Implement the routing logic:
 
 ```python
-# Get start and end lanelets
+# Get the start lanelet; find the goal lanelet the same way using self.goal_point
 start_lanelet = findNearest(self.lanelet2_map.laneletLayer, self.current_location, 1)[0][1]
-goal_lanelet = findNearest(self.lanelet2_map.laneletLayer, self.goal_point, 1)[0][1]
+goal_lanelet = ...
 
 # Find route (the last argument disables lane changes)
 route = self.graph.getRoute(start_lanelet, goal_lanelet, 0, False)
@@ -74,11 +74,9 @@ if route is None:
     rospy.logwarn("%s - No route found to goal position", rospy.get_name())
     return
 
-# Find shortest path
+# Find shortest path; check it for None with a logwarn the same way as above
 path = route.shortestPath()
-if path is None:
-    rospy.logwarn("%s - No path found to goal position", rospy.get_name())
-    return
+...
 
 # Get path without lane changes
 path_no_lane_change = path.getRemainingLane(start_lanelet)
@@ -105,8 +103,8 @@ Find `TODO 3` — it appears in two places:
 ```python
 for j, lanelet in enumerate(laneletseq):
     # Get speed from lanelet attribute or use global speed limit. The speed limit is in km/h, convert to m/s for the Waypoint message.
-    # TODO
-    
+    speed = ...
+
     # Iterate through the centerline points and create waypoints. 
     for i, point in enumerate(lanelet.centerline):
         # Skip first point of every lanelet except the very first (endpoints overlap)
@@ -132,7 +130,7 @@ Key points:
 * Everything should run without errors. Remove any temporary print statements if necessary.
 * Run `rqt_graph` (`Nodes only` option) — the nodes should be connected:
 
-![node graph](images/rqt_graph_task4.png)
+![node graph](images/rosgraph.png)
 
 * Place a start and goal — the path should be visualized and the car should start following it.
 * Try: `roslaunch autoware_mini_tutorial lesson4.launch speed_limit:=10` and verify speed is limited (echo `/localization/current_velocity`).

@@ -6,7 +6,7 @@ The primary task of the localizer is to determine the vehicle's position on the 
 
 We will use logged data from the car's [Novatel PwrPak7D](https://novatel.com/products/receivers/enclosures/pwrpak7d) GNSS sensor. The Novatel system combines the absolute GNSS positions with relative IMU (Inertial Measurement Unit) measurements to improve accuracy. The accuracy is further enhanced by using stationary ground base stations within [RTK](https://en.wikipedia.org/wiki/Real-time_kinematic_positioning) (Real-Time Kinematic). In addition to location, it also determines the speed of the vehicle from consecutive locations.
 
-The data is saved in a rosbag file. The GNSS log is recorded in the `/novatel/oem7/inspva` topic. This topic includes two kinds of data:
+The data is saved in a rosbag file. The GNSS log is recorded in the `/novatel/oem7/inspva` topic with the message type [novatel_oem7_msgs/INSPVA](https://docs.ros.org/en/noetic/api/novatel_oem7_msgs/html/msg/INSPVA.html). This topic includes two kinds of data:
 * **location**, given as latitude, longitude, and height,
 * **velocity**, given in north, east, and up directions.
 
@@ -255,3 +255,8 @@ If you open the launch file, you can see three arguments in the beginning
 These arguments can be specified when you run the launch file. The tab key is beneficial here because it auto-completes. Try to enter the same roslaunch command `roslaunch autoware_mini_tutorial lesson2.launch` by hitting the tab key at various steps.
 
 Additionally, enter the tab key at the end and see the arguments appear. For example, try the command with arguments `roslaunch autoware_mini_tutorial lesson2.launch interval:=5 waypoints_file:=waypoints_5m.csv`
+
+##### Validation
+* `roslaunch autoware_mini_tutorial lesson2.launch` and play around with parameters 
+* Clean the code to not contain the temporary print statements — the node's outputs are the published topics and the transform.
+* Push your changes to Github.

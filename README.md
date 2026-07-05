@@ -6,14 +6,14 @@ This tutorial is an introduction to [Autoware Mini](https://github.com/UT-ADL/au
 
 | Lesson | Topic                   |
 |--------|-------------------------|
-|    1   | [Introduction to ROS](lesson1)     |
-|    2   | [Localizer](lesson2)               |
-|    3   | [Controller](lesson3)              |
-|    4   | [Global planner](lesson4)          |
-|    5   | [Obstacle detection](lesson5)      |
-|    6   | [Local planner](lesson6)           |
-|    7   | [Traffic light detection](lesson7) |
-|    8   | [CARLA simulator](lesson8)         |
+|    1   | [Introduction to ROS](lesson1/README.md)     |
+|    2   | [Localizer](lesson2/README.md)               |
+|    3   | [Controller](lesson3/README.md)              |
+|    4   | [Global planner](lesson4/README.md)          |
+|    5   | [Obstacle detection](lesson5/README.md)      |
+|    6   | [Local planner](lesson6/README.md)           |
+|    7   | [Traffic light detection](lesson7/README.md) |
+|    8   | [CARLA simulator](lesson8/README.md)         |
 
 ## Getting Started
 
@@ -34,7 +34,7 @@ The university lab PCs already have the Autoware Mini workspace set up at `~/aut
    cd ~/autoware_mini_ws/src
    git clone git@github.com:<your_github_username>/autoware_mini_tutorial.git
    ```
-3. Follow the instructions in [Lesson 1](lesson1) to get started.
+3. Follow the instructions in [Lesson 1](lesson1/README.md) to get started.
 
 ### Working with Git
 

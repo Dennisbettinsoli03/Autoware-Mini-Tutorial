@@ -15,7 +15,10 @@
     <param name="/use_sim_time" value="true" />
 
     <!-- Play back bag -->
-    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" />
+    <node pkg="rosbag" type="play" name="player" required="true" args="--clock --delay 3 --queue=1 $(find autoware_mini_tutorial)/shared/data/bags/$(arg bag_file)" >
+        <!-- The bag already contains recorded map->base_link transforms, remap them so they don't conflict with the transform published by the localizer -->
+        <remap from="/tf" to="/tf_recorded" />
+    </node>
 
     <!-- Localization -->
     <group ns="localization">

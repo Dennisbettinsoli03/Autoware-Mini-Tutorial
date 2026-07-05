@@ -2,7 +2,6 @@
     
     <!-- Arguments, can be passed in using command line -->
     <arg name="waypoints_file"      default="waypoints_1m.csv"  doc="waypoints file name" />
-    <arg name="lookahead_distance"  default="5"                 doc="lookahead distance" />
     <arg name="lanelet2_map_name"   default="tartu_demo.osm"    doc="map file name" />
 
     <!-- Nodes -->
@@ -30,6 +29,7 @@
         <!-- Bicycle_model simulator -->
         <node pkg="autoware_mini" type="bicycle_simulation.py" name="bicycle_simulation" output="screen" required="true" >
             <param name="lanelet2_map_path" value="$(find autoware_mini)/data/maps/$(arg lanelet2_map_name)" />
+            <param name="broadcast_tf"      value="true" />
         </node>
 
         <rosparam command="load" file="$(find autoware_mini)/config/vehicle.yaml" />

@@ -65,7 +65,8 @@ labels = self.clusterer.fit_predict(points)
 [`numpify`](https://github.com/eric-wieser/ros_numpy) converts a ROS `PointCloud2` message into a numpy structured array. [`structured_to_unstructured`](https://numpy.org/doc/stable/user/basics.rec.html) extracts specific fields into a regular (N, 3) array.
 
 ##### Validation
-* Add a temporary `print(points.shape, labels.shape)` after the clustering to verify the output. * `roslaunch autoware_mini_tutorial lesson5.launch`
+* Add a temporary `print(points.shape, labels.shape)` after the clustering to verify the output.
+* `roslaunch autoware_mini_tutorial lesson5.launch`
 * You should see matching shapes like:
 ```
 (7330, 3) (7330,)
@@ -112,6 +113,8 @@ data = unstructured_to_structured(points_labeled, dtype=np.dtype([
 
 **Now we switch to the second node.** Open [`lesson5/nodes/cluster_detector.py`](nodes/cluster_detector.py) — this skeleton receives clustered points from `points_clusterer` and converts them into `DetectedObject` messages.
 
+`DetectedObject` and `DetectedObjectArray` are custom message types of `autoware_mini`, so you won't find documentation for them online. Their definitions — like those of `Path`, `Waypoint`, and `VehicleCommand` from the previous lessons — are `.msg` files in the `autoware_mini/msg/` directory, and you can print the fields of any message type with `rosmsg show autoware_mini/DetectedObject`. Custom messages are created and populated the same way as standard ROS messages: instantiate the class and fill in the fields.
+
 Study the given code in `cluster_callback`:
 - The clustered point cloud is converted to a numpy array with x, y, z, and label columns
 - If the points are in a different frame than `output_frame` (which is `map`), they are transformed using a TF lookup and homogeneous coordinate multiplication
@@ -150,7 +153,11 @@ centroid = ...
 points_2d = MultiPoint(points3d[:, :2])
 hull = points_2d.convex_hull
 min_z = float(np.min(points3d[:, 2]))
-convex_hull_points = [a for hull in [[x, y, min_z] for x, y in hull.exterior.coords] for a in hull]
+
+# Hull coordinates as (N, 2) array; drop the last point — in a closed ring it duplicates the first one
+hull_points_2d = np.array(hull.exterior.coords)[:-1]
+# Append min_z as the z-coordinate to every hull point and flatten into [x1, y1, z1, x2, y2, z2, ...]
+convex_hull_points = np.hstack((hull_points_2d, np.full((len(hull_points_2d), 1), min_z))).ravel().tolist()
 ```
 
 The convex hull is computed in 2D (x, y only) using [Shapely's MultiPoint](https://shapely.readthedocs.io/en/stable/reference/shapely.MultiPoint.html). The hull coordinates are flattened into a list of `[x, y, z]` values, using `min_z` (the bottom of the cluster) as the z-coordinate for all hull points.

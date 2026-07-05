@@ -57,17 +57,18 @@ class PurePursuitFollower:
             self.distance_to_velocity_interpolator = distance_to_velocity_interpolator
 
     def current_pose_callback(self, msg):
-        if self.path_linestring is None or self.distance_to_velocity_interpolator is None:
+        if self.path_linestring is None:
+            # TODO 1: Print out the current pose coordinates to verify data flow.
+            #         print(msg.pose.position.x, msg.pose.position.y)
+
             steering_angle = 0.0
             linear_velocity = 0.0
             linear_acceleration = -3.0
         else:
-            # TODO 1: Print out the current pose coordinates to verify data flow.
-            #         print(msg.pose.position.x, msg.pose.position.y)
-
             # TODO 3: Calculate the ego vehicle's distance from the path start.
             #         - Convert ego position to a shapely Point
             #         - Use self.path_linestring.project() to find the distance
+            #         - Remove the TODO 1 printout and print d_ego_from_path_start instead
 
             # TODO 4: Calculate the steering angle using the Pure Pursuit formula.
             #         - Get heading from msg.pose.orientation using euler_from_quaternion
@@ -83,6 +84,8 @@ class PurePursuitFollower:
             # TODO 5: Use the distance-to-velocity interpolator to get the velocity
             #         at the ego vehicle's position on the path. Replace the constant
             #         linear_velocity with the interpolated value.
+            #         Since the interpolator is now used here, add a check for
+            #         self.distance_to_velocity_interpolator is None to the if statement above.
 
         # TODO 2: Create and publish a VehicleCommand message with constant steering angle and velocity for testing.
 

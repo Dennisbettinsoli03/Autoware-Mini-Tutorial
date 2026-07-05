@@ -7,7 +7,7 @@ In this lesson, we will implement a simple path-following algorithm (controller)
 Output from your node (steering angle and speed) will go into the `bicycle_simulation` node (reused from `autoware_mini`). It will calculate and update where the vehicle will be in the next time step and its speed and orientation based on its current position and commands from your controller node.
 
 More about Pure Pursuit:
-* [Three methods of lateral control](https://www.shuffleai.blog/blog/Three_Methods_of_Vehicle_Lateral_Control.html)
+* [Three methods of lateral control](https://web.archive.org/web/20250601131849/https://www.shuffleai.blog/blog/Three_Methods_of_Vehicle_Lateral_Control.html)
 * [Pure Pursuit](https://thomasfermi.github.io/Algorithms-for-Automated-Driving/Control/PurePursuit.html)
 
 ### Expected outcome
@@ -60,13 +60,15 @@ vehicle_cmd.acceleration = 0
 self.vehicle_cmd_pub.publish(vehicle_cmd)
 ```
 
+Acceleration limits how fast the simulator changes the current speed towards the commanded speed, and steering angle denotes maximum allowed steering angle.
+
 ##### Validation
 * `roslaunch autoware_mini_tutorial lesson3.launch`
 * Place a `2D Pose Estimate` close to the path, and the ego vehicle should drive in a circular pattern.
 * Run `rostopic echo /control/vehicle_cmd` to verify what commands are actually published.
-* Run [`rqt_graph`](http://wiki.ros.org/rqt_graph) (`Nodes_only` option selected) — you should see a cycle: `/control/pure_pursuit_follower -> /control/vehicle_cmd -> /vehicle/bicycle_simulation -> /localization/current_pose -> /pure_pursuit_follower`
+* Run [`rqt_graph`](http://wiki.ros.org/rqt_graph) (`Nodes_only` option selected) — you should see a cycle: `/control/pure_pursuit_follower -> /control/vehicle_cmd -> /vehicle/bicycle_simulation -> /localization/current_pose -> /pure_pursuit_follower`.
 
-![node graph](images/node_graph_task_4.png)
+![node graph](images/rosgraph.png)
 
 
 ## 3. Implement lateral control I
@@ -92,7 +94,7 @@ current_pose = Point([msg.pose.position.x, msg.pose.position.y])
 d_ego_from_path_start = self.path_linestring.project(current_pose)
 ```
 
-Replace the previous printout with printing `d_ego_from_path_start`.
+Remove the previous printout (TODO 1) and print `d_ego_from_path_start` instead.
 
 Note: The `current_pose_callback` already checks if `self.path_linestring is None` — this prevents errors when the path hasn't been received yet.
 
@@ -130,6 +132,8 @@ The steering angle formula:
 * α - the difference in car heading and lookahead point heading
 * ld - lookahead point distance
 
+The idea behind the formula: we pick a lookahead point on the path with the constant distance ahead of the car and steer so that the car would drive a circular arc that ends up in that point. The angle α tells how much the direction to the lookahead point differs from where the car is currently heading — the larger the α (or the shorter the lookahead distance ld), the sharper the arc, and the larger the required steering angle δ.
+
 ![pure_pursuit_image](images/pure_pursuit_img.png)
 
 **Important Note:** On the image, you can see two terms, but here we use them differently:
@@ -146,7 +150,7 @@ A modified drawing with added heading angle and steering angle:
 Find `TODO 4` in `pure_pursuit_follower.py` — it appears in two places:
 
 1. In `__init__`: Read in parameter values:
-   - `lookahead_distance` — comes from the launch file via [`shared/config/control.yaml`](../shared/config/control.yaml). Used to find the lookahead point location on the path.
+   - `lookahead_distance` — comes from [`shared/config/control.yaml`](../shared/config/control.yaml). Used to find the lookahead point location on the path.
    - `wheel_base` — comes from `autoware_mini/config/vehicle.yaml`. Important parameter for the steering angle calculation.
 
 ```python
@@ -154,7 +158,7 @@ self.lookahead_distance = rospy.get_param("~lookahead_distance")
 self.wheel_base = rospy.get_param("/vehicle/wheel_base")
 ```
 
-2. In `current_pose_callback`: Calculate heading, lookahead point, and steering angle:
+2. In `current_pose_callback`: Calculate heading, lookahead point, and steering angle. Both headings are angles from the x-axis: the car's heading comes from its orientation quaternion, and the lookahead heading is the direction of the vector from the car to the lookahead point. Their difference is the α in the formula:
 
 ```python
 # Get heading from current pose orientation
@@ -210,10 +214,10 @@ Assign `distance_to_velocity_interpolator` to the local variable that is then st
 linear_velocity = float(self.distance_to_velocity_interpolator(d_ego_from_path_start))
 ```
 
-Replace the constant `linear_velocity = 0.0` in the `else` branch with this interpolated value, and use it in the vehicle command.
+Replace the constant `linear_velocity = 0.0` in the `else` branch with this interpolated value, and use it in the vehicle command. Since the interpolator is now used in `current_pose_callback`, also add a check for `self.distance_to_velocity_interpolator is None` to the `if` statement at the top of the callback.
 
 ##### Validation
 * `roslaunch autoware_mini_tutorial lesson3.launch`
 * Place the ego vehicle at the start of the path (use `2D Pose Estimate`), and it should start following the path with the speed reflecting the moment of recording.
 * If everything works without errors, clean the code (remove unnecessary debugging printouts) and commit to your repo.
-* Try different lookahead distances by changing `lookahead_distance` in [`shared/config/control.yaml`](../shared/config/control.yaml). Is the behavior different? What is different and why?
+* Try different lookahead distances by changing `lookahead_distance` in [`shared/config/control.yaml`](../shared/config/control.yaml). Is the behavior different? What is different and why? (These questions are for your own understanding.)
