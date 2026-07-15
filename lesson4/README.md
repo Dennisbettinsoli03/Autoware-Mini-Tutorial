@@ -40,7 +40,7 @@ rospy.loginfo("%s - goal position (%f, %f, %f) in %s frame", rospy.get_name(),
 
 ## 2. Find the route on the map
 
-Now we will implement the routing logic. Given a current position and a goal point, we need to find the shortest route on the Lanelet2 map.
+Now we will implement the routing logic. Given a current position and a goal point, we need to find the shortest route on the Lanelet2 map. Note that we want the route **without lane changes** — `getRoute` allows them by default, which would produce routes that jump between parallel lanes.
 
 The key steps are:
 1. Find which lanelet the vehicle is currently in (using [findNearest](https://github.com/fzi-forschungszentrum-informatik/Lanelet2/blob/master/lanelet2_python/python_api/geometry.cpp))
@@ -68,7 +68,7 @@ self.graph = lanelet2.routing.RoutingGraph(self.lanelet2_map, traffic_rules)
 start_lanelet = findNearest(self.lanelet2_map.laneletLayer, self.current_location, 1)[0][1]
 goal_lanelet = ...
 
-# Find route (the last argument disables lane changes)
+# Find route (the third argument is the routing cost id, the last argument disables lane changes)
 route = self.graph.getRoute(start_lanelet, goal_lanelet, 0, False)
 if route is None:
     rospy.logwarn("%s - No route found to goal position", rospy.get_name())

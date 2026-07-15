@@ -68,8 +68,8 @@ class YoloTrafficLightDetector:
         self.transform_timeout = rospy.get_param("~transform_timeout")
         self.iou_threshold = rospy.get_param("~iou_threshold")
         self.camera_delay_compensation = rospy.get_param("~camera_delay_compensation")
-        lanelet2_map_path = rospy.get_param("~lanelet2_map_path")
         # Parameters related to lanelet2 map loading
+        lanelet2_map_path = rospy.get_param("~lanelet2_map_path")
         coordinate_transformer = rospy.get_param("/localization/coordinate_transformer")
         use_custom_origin = rospy.get_param("/localization/use_custom_origin")
         utm_origin_lat = rospy.get_param("/localization/utm_origin_lat")

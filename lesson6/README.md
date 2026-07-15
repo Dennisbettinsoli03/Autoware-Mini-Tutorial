@@ -124,7 +124,7 @@ calculated_target_velocities = ...
 ```python
 target_velocity = np.min(calculated_target_velocities)
 
-for i, wp in enumerate(local_path_msg.waypoints):
+for wp in local_path_msg.waypoints:
     wp.speed = min(target_velocity, wp.speed)
 ```
 

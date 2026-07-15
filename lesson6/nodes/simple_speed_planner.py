@@ -95,15 +95,15 @@ class SimpleSpeedPlanner:
             #         - Project the collision point velocity onto the heading using
             #           project_vector_to_heading()
 
+            # TODO 6: Modify target velocity with reaction time.
+            #         - Subtract braking_reaction_time * abs(collision_point_speeds)
+            #           from target distances
+
             # TODO 5: Account for collision point speed in target velocity.
             #         - Use full formula: v = max(0, approaching_speed + sqrt(max(0, v0^2 + 2*a*s)))
             #           where approaching_speed = min(v0, 0) handles objects moving toward us
             #         - Find the collision point with the minimum target velocity (not just closest)
             #         - Set target_object_speed from the collision point speeds
-
-            # TODO 6: Modify target velocity with reaction time.
-            #         - Subtract braking_reaction_time * abs(collision_point_speeds)
-            #           from target distances
 
             # Publishing the modified local path goes below all the TODOs.
             # In TODO 2, create the modified Path message here and pass it to

@@ -60,7 +60,8 @@ class ClusterDetector:
 
             # TODO 4: Calculate centroid and convex hull for each cluster.
             #         - Centroid: mean of x, y, z coordinates
-            #         - Convex hull: use MultiPoint(points3d[:, :2]).convex_hull
+            #         - Convex hull: use MultiPoint(points3d[:, :2]).convex_hull,
+            #           skip clusters whose hull is not a Polygon (line or point)
             #         - Create a DetectedObject and set: id, label, color, centroid,
             #           convex_hull, valid, and reliability flags
             #         - Append to the DetectedObjectArray and publish after the loop

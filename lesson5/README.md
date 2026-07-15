@@ -152,6 +152,9 @@ centroid = ...
 # Calculate convex hull using 2D points. Z-axis for the hull is set to the minimum z of the cluster (bottom of the object)
 points_2d = MultiPoint(points3d[:, :2])
 hull = points_2d.convex_hull
+# The hull is a polygon only for 3+ non-collinear points; a line or a point is not a usable obstacle outline
+if hull.geom_type != "Polygon":
+    continue
 min_z = float(np.min(points3d[:, 2]))
 
 # Hull coordinates as (N, 2) array; drop the last point — in a closed ring it duplicates the first one
