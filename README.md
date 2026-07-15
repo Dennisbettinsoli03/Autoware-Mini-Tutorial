@@ -13,7 +13,7 @@ This tutorial is an introduction to [Autoware Mini](https://github.com/UT-ADL/au
 |    5   | [Obstacle detection](lesson5/README.md)      |
 |    6   | [Local planner](lesson6/README.md)           |
 |    7   | [Traffic light detection](lesson7/README.md) |
-|    8   | [CARLA simulator](lesson8/README.md)         |
+|    8   | [Testing in the CARLA simulator](lesson8/README.md) |
 
 ## Getting Started
 
