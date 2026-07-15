@@ -64,6 +64,8 @@ labels = self.clusterer.fit_predict(points)
 
 [`numpify`](https://github.com/eric-wieser/ros_numpy) converts a ROS `PointCloud2` message into a numpy structured array. [`structured_to_unstructured`](https://numpy.org/doc/stable/user/basics.rec.html) extracts specific fields into a regular (N, 3) array.
 
+Guard against an empty point cloud: DBSCAN cannot cluster 0 points, so skip such messages before clustering.
+
 ##### Validation
 * Add a temporary `print(points.shape, labels.shape)` after the clustering to verify the output.
 * `roslaunch autoware_mini_tutorial lesson5.launch`

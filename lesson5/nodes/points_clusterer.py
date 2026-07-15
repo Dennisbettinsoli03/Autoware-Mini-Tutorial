@@ -32,6 +32,7 @@ class PointsClusterer:
         #         - Use structured_to_unstructured()
         #           to get an (N, 3) array of point coordinates
         #         - Run self.clusterer.fit_predict(points) to get cluster labels
+        #         - Skip empty point clouds (0 points) - DBSCAN cannot cluster them
 
         # TODO 2: Publish the clustered points as a PointCloud2 message.
         #         - Concatenate points with labels (as a new column)
