@@ -24,7 +24,7 @@ By default the detected objects and traffic light statuses come from the simulat
 ##### Instructions
 1. Start the CARLA simulator:
     ```
-    $CARLA_ROOT/CarlaUE4.sh -prefernvidia -quality-level=Low -RenderOffScreen
+    $CARLA_ROOT/CarlaUE4.sh -prefernvidia -RenderOffScreen
     ```
 2. In another terminal, launch your stack:
     ```
@@ -44,9 +44,9 @@ A driving scenario adds actors to the otherwise empty world: NPC vehicles and pe
 When your stack is running, VSE automatically detects your ego vehicle and hands the driving over to it - the scenario provides the destination, the other actors and the evaluation.
 
 ##### Instructions
-1. With `lesson8.launch` running, start VSE and open the `tartu_demo` map
-2. Open the scenario (`Scenario` menu -> `Open`): `examples/tartu_demo/tartu_demo_route.json` from the VSE folder
-3. Press **Play**
+1. With `lesson8.launch` running, start VSE and open the `tartu_demo` map. When VSE first launches, it will ask to select the agent's behavior logic. Navigate to `autoware_mini/nodes/platform/carla/` and select `carla_minimal_agent.py`.
+2. Open the scenario (`Scenario` menu -> `Open`): `shared/scenarios/tartu_demo_route_simplified.json` from the tutorial folder
+3. Press **Play**. Note: if your machine has less than 10 Gb VRAM slowdowns are expected.
 
 ##### Validation
 * The goal appears in RViz automatically and the vehicle starts driving the demo lap
@@ -59,7 +59,7 @@ When your stack is running, VSE automatically detects your ego vehicle and hands
 Your framework from the previous lessons is a simplified one. Remember all limitations that were discussed through the lessons. In this final task you will demonstrate these limits: create three scenarios where your framework fails.
 
 ##### Instructions
-1. Copy `tartu_demo_route.json` (e.g. to `failure_case_1.json`) and modify it in VSE - move, add, retime or reroute actors and triggers until your stack demonstrably fails, while a careful human driver would still manage
+1. Copy `tartu_demo_route_simplified.json` (e.g. to `failure_case_1.json`) and modify it in VSE - move, add, retime or reroute actors and triggers until your stack demonstrably fails, while a careful human driver would still manage
 2. For every failure case, think of a specific change to the framework that would fix it. You do not need implement the fix. The three cases should have three different proposed fixes.
 3. Create a `lesson8/scenarios/` folder in your repository and commit the three scenario JSONs there
 4. Fill in the three descriptions below: what happens in the scenario, how your framework fails, and what change to the framework would fix it. Add screenshots if needed.
