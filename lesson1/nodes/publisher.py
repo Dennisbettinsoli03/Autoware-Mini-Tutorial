@@ -8,7 +8,10 @@ class Publisher:
         # Parameters
         self.message = rospy.get_param('~message', 'Hello World!')
         # Internal variables
-        self.rate = rospy.Rate(rospy.get_param('~rate', 1.0))  # Default rate is 1 Hz
+        rate = rospy.get_param('~rate', 1.0) # Default rate is 1 Hz 
+
+        # Internal variables
+        self.rate = rospy.Rate(rate)
 
         # Publishers
         self.pub = rospy.Publisher('/message', String, queue_size=10)
