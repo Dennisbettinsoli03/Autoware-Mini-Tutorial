@@ -26,7 +26,8 @@ class Localizer:
         # TODO 2: Create a coordinate transformer using self.crs_wgs84 and self.crs_utm.
         #         Use Transformer.from_crs(). Then transform the origin point (utm_origin_lat,
         #         utm_origin_lon) and store results as self.origin_x and self.origin_y.
-
+        self.transformer = Transformer.from_crs(self.crs_wgs84, self.crs_utm)
+        self.origin_x, self.origin_y = self.transformer.transform(utm_origin_lat, utm_origin_lon)
         # Subscribers
         rospy.Subscriber('/novatel/oem7/inspva', INSPVA, self.transform_coordinates)
 
@@ -36,33 +37,54 @@ class Localizer:
         self.br = TransformBroadcaster()
 
     def transform_coordinates(self, msg):
-        # TODO 1: Print latitude and longitude from msg to verify data is received.
+        # Transform the latitude and longitude from the INSPVA message to UTM coordinates using the transformer.
+        self.msg_x, self.msg_y = self.transformer.transform(msg.latitude, msg.longitude)
+        self.msg_x -= self.origin_x
+        self.msg_y -= self.origin_y
+        print(self.msg_x, self.msg_y)
 
-        # TODO 2: Transform msg.latitude and msg.longitude to UTM coordinates using
-        #         self.transformer, then subtract self.origin_x and self.origin_y.
+        # calculate the azimuth correction using the UTM projection and convert it to yaw
+        azimuth_correction = self.utm_projection.get_factors(msg.longitude, msg.latitude).meridian_convergence
+        yaw = self.convert_azimuth_to_yaw(math.radians(msg.azimuth - azimuth_correction))
+        # create a quaternion from the yaw angle
+        x, y, z, w = quaternion_from_euler(0, 0, yaw)
+        orientation = Quaternion(x, y, z, w)
 
-        # TODO 3: Calculate orientation as a quaternion.
-        #         - Get azimuth correction: self.utm_projection.get_factors(msg.longitude, msg.latitude).meridian_convergence
-        #         - Subtract correction from msg.azimuth, convert to radians
-        #         - Use convert_azimuth_to_yaw() to get yaw angle
-        #         - Use quaternion_from_euler(0, 0, yaw) to get quaternion, create Quaternion object
+        # create a PoseStamped message
+        current_pose_msg = PoseStamped()
+        current_pose_msg.header.stamp = msg.header.stamp
+        current_pose_msg.header.frame_id = "map"
+        current_pose_msg.pose.position.x = self.msg_x
+        current_pose_msg.pose.position.y = self.msg_y
+        current_pose_msg.pose.position.z = msg.height - self.undulation
+        current_pose_msg.pose.orientation = orientation
+        self.current_pose_pub.publish(current_pose_msg)
 
-        # TODO 4: Create and publish a PoseStamped message on self.current_pose_pub:
-        #         - header.stamp from msg.header.stamp, frame_id = "map"
-        #         - position.x, position.y from transformed coordinates
-        #         - position.z = msg.height - self.undulation
-        #         - orientation from the quaternion
+        # calculate the current velocity from the north and east velocities
+        velocity = math.sqrt(msg.north_velocity**2 + msg.east_velocity**2)
+        current_velocity_msg = TwistStamped()
+        current_velocity_msg.header.stamp = msg.header.stamp
+        current_velocity_msg.header.frame_id = "base_link"
+        current_velocity_msg.twist.linear.x = velocity
+        current_velocity_msg.twist.linear.y = 0.0
+        current_velocity_msg.twist.linear.z = 0.0
+        self.current_velocity_pub.publish(current_velocity_msg)
+     
+        # create a transform message
+        t = TransformStamped()
 
-        # TODO 5: Calculate velocity as norm of msg.north_velocity and msg.east_velocity.
-        #         Create and publish a TwistStamped message on self.current_velocity_pub:
-        #         - header.stamp from msg.header.stamp, frame_id = "base_link"
-        #         - twist.linear.x = calculated velocity
+        # fill in the transform message - t
+        t.header.stamp = msg.header.stamp
+        t.header.frame_id = "map"
+        t.child_frame_id = "base_link"
+        t.transform.translation.x = self.msg_x
+        t.transform.translation.y = self.msg_y
+        t.transform.translation.z = msg.height - self.undulation
+        t.transform.rotation = orientation
 
-        # TODO 6: Create and publish a TransformStamped message using self.br.sendTransform():
-        #         - header.stamp from msg.header.stamp, frame_id = "map"
-        #         - child_frame_id = "base_link"
-        #         - transform.translation from position (x, y, z)
-        #         - transform.rotation from orientation quaternion
+        # publish transform
+        self.br.sendTransform(t)
+
         pass
 
     @staticmethod
