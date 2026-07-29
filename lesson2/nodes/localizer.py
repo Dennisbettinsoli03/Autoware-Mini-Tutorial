@@ -23,9 +23,7 @@ class Localizer:
         self.crs_utm = CRS.from_epsg(25835)
         self.utm_projection = Proj(self.crs_utm)
 
-        # TODO 2: Create a coordinate transformer using self.crs_wgs84 and self.crs_utm.
-        #         Use Transformer.from_crs(). Then transform the origin point (utm_origin_lat,
-        #         utm_origin_lon) and store results as self.origin_x and self.origin_y.
+        # Transformer to convert from WGS84 to UTM
         self.transformer = Transformer.from_crs(self.crs_wgs84, self.crs_utm)
         self.origin_x, self.origin_y = self.transformer.transform(utm_origin_lat, utm_origin_lon)
         # Subscribers
@@ -38,10 +36,9 @@ class Localizer:
 
     def transform_coordinates(self, msg):
         # Transform the latitude and longitude from the INSPVA message to UTM coordinates using the transformer.
-        self.msg_x, self.msg_y = self.transformer.transform(msg.latitude, msg.longitude)
-        self.msg_x -= self.origin_x
-        self.msg_y -= self.origin_y
-        print(self.msg_x, self.msg_y)
+        map_x, map_y = self.transformer.transform(msg.latitude, msg.longitude)
+        map_x -= self.origin_x
+        map_y -= self.origin_y
 
         # calculate the azimuth correction using the UTM projection and convert it to yaw
         azimuth_correction = self.utm_projection.get_factors(msg.longitude, msg.latitude).meridian_convergence
@@ -54,8 +51,8 @@ class Localizer:
         current_pose_msg = PoseStamped()
         current_pose_msg.header.stamp = msg.header.stamp
         current_pose_msg.header.frame_id = "map"
-        current_pose_msg.pose.position.x = self.msg_x
-        current_pose_msg.pose.position.y = self.msg_y
+        current_pose_msg.pose.position.x = map_x
+        current_pose_msg.pose.position.y = map_y
         current_pose_msg.pose.position.z = msg.height - self.undulation
         current_pose_msg.pose.orientation = orientation
         self.current_pose_pub.publish(current_pose_msg)
@@ -77,15 +74,14 @@ class Localizer:
         t.header.stamp = msg.header.stamp
         t.header.frame_id = "map"
         t.child_frame_id = "base_link"
-        t.transform.translation.x = self.msg_x
-        t.transform.translation.y = self.msg_y
-        t.transform.translation.z = msg.height - self.undulation
+        t.transform.translation.x = map_x
+        t.transform.translation.y = map_y
+        t.transform.translation.z = current_pose_msg.pose.position.z
         t.transform.rotation = orientation
 
         # publish transform
         self.br.sendTransform(t)
 
-        pass
 
     @staticmethod
     def convert_azimuth_to_yaw(azimuth):
