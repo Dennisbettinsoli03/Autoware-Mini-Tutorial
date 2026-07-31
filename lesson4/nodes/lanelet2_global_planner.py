@@ -103,6 +103,7 @@ class GlobalPlanner:
 
     def convert_laneletseq_to_waypoints_list(self, laneletseq):
         waypoints = []
+        last_lanelet_start = 0
 
         # Iterate through the lanelets in the sequence and create waypoints from their centerline points.
         for j, lanelet in enumerate(laneletseq):
@@ -110,6 +111,7 @@ class GlobalPlanner:
                     speed = min(float(lanelet.attributes["speed_ref"]), self.speed_limit) / 3.6
                 else:
                     speed = self.speed_limit / 3.6
+                last_lanelet_start = len(waypoints)
 
                 for i, point in enumerate(lanelet.centerline):
                     if i == 0 and j != 0:
@@ -123,11 +125,12 @@ class GlobalPlanner:
 
         # If the goal point is set, trim the waypoints to only include those up to the closest point to the goal.
         if waypoints:
-            wp = np.array([[w.position.x, w.position.y] for w in waypoints])
-            closest_point = np.argmin(np.sqrt((wp[:, 0] - self.goal_point.x)**2 + (wp[:, 1] - self.goal_point.y)**2))
+            wp_last = np.array([[w.position.x, w.position.y] for w in waypoints[last_lanelet_start:]])
+            closest_in_last = np.argmin(np.sqrt((wp_last[:, 0] - self.goal_point.x)**2 + (wp_last[:, 1] - self.goal_point.y)**2))
+            closest_point = last_lanelet_start + closest_in_last
             waypoints = waypoints[:closest_point + 1]
-            waypoints[-1].position.x = self.goal_point.x
-            waypoints[-1].position.y = self.goal_point.y
+            self.goal_point.x = waypoints[-1].position.x
+            self.goal_point.y = waypoints[-1].position.y
         return waypoints
 
     def publish_lane_from_waypoints_list(self, waypoints):
