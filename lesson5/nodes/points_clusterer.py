@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from shapely import points
-
 import rospy
 import numpy as np
 from numpy.lib.recfunctions import structured_to_unstructured, unstructured_to_structured
@@ -34,14 +32,11 @@ class PointsClusterer:
         points = structured_to_unstructured(data[['x', 'y', 'z']], dtype=np.float32)
 
         if points.shape[0] == 0:
-                    return
+            return
 
-    
         labels = self.clusterer.fit_predict(points)
-   
         # Concatenate points with labels
         points_labeled = np.column_stack((points, labels))
-
         # Filter out noise points (label == -1)
         points_labeled = points_labeled[points_labeled[:,3] != -1]
 
@@ -54,7 +49,7 @@ class PointsClusterer:
         ]))
 
         # Create the message using msgify, set the correct header and publish
-        clustered_msg = msgify  (PointCloud2, data)
+        clustered_msg = msgify(PointCloud2, data)
         clustered_msg.header.stamp = msg.header.stamp
         clustered_msg.header.frame_id = msg.header.frame_id
         self.clustered_pub.publish(clustered_msg)
