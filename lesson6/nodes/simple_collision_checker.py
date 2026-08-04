@@ -86,7 +86,9 @@ class SimpleCollisionChecker:
                 object_polygon = shapely.Polygon(hull)
                 if local_path_buffer.intersects(object_polygon):
                     intersection = local_path_buffer.intersection(object_polygon)
-                    intersection_points = intersection.exterior.coords   # ← qui lo rendi iterabile a coppie
+                    intersection_points = shapely.get_coordinates(intersection)
+
+                    category = 3 if np.hypot(obj.velocity.x, obj.velocity.y) < self.stopped_speed_limit else 4
 
                     for x, y in intersection_points:
                         collision_points = np.append(collision_points, np.array([(
@@ -94,7 +96,7 @@ class SimpleCollisionChecker:
                             obj.velocity.x, obj.velocity.y, obj.velocity.z,
                             self.braking_safety_distance_obstacle,
                             np.inf,
-                            3 if np.hypot(obj.velocity.x, obj.velocity.y) < self.stopped_speed_limit else 4
+                            category
                         )], dtype=DTYPE))
 
         if goal_point is not None:
