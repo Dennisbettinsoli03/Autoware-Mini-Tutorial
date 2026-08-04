@@ -76,18 +76,34 @@ class SimpleCollisionChecker:
             self.collision_points_pub.publish(collision_points_msg)
             return
 
-        # TODO 1: Create obstacle collision points.
-        #         - Create a Shapely LineString from the local path waypoints
-        #         - Buffer it with safety_box_width / 2 (cap_style="flat")
-        #         - If detected_objects is not None and not empty, iterate over them
-        #           and add collision points from their intersections with the buffered path
-        #           to the collision_points array
+        # Create obstacle collision points.
+        local_path_linestring = shapely.geometry.LineString([(msg.waypoints[i].position.x, msg.waypoints[i].position.y) for i in range(len(msg.waypoints))])
+        local_path_buffer = local_path_linestring.buffer(self.safety_box_width / 2, cap_style="flat")
+        shapely.prepare(local_path_buffer)
+        if detected_objects is not None and len(detected_objects) > 0:
+            for obj in detected_objects:
+                hull = np.array(obj.convex_hull).reshape(-1, 3)[:, :2]
+                object_polygon = shapely.Polygon(hull)
+                if local_path_buffer.intersects(object_polygon):
+                    intersection = local_path_buffer.intersection(object_polygon)
+                    intersection_points = intersection.exterior.coords   # ← qui lo rendi iterabile a coppie
 
-        # TODO 7: Add goal point as collision point.
-        #         - Check if goal_point is within the buffered local path
-        #         - If so, append it as a collision point with category=1, zero velocity,
-        #           distance_to_stop=braking_safety_distance_goal
+                    for x, y in intersection_points:
+                        collision_points = np.append(collision_points, np.array([(
+                            x, y, obj.centroid.z,
+                            obj.velocity.x, obj.velocity.y, obj.velocity.z,
+                            self.braking_safety_distance_obstacle,
+                            np.inf,
+                            3 if np.hypot(obj.velocity.x, obj.velocity.y) < self.stopped_speed_limit else 4
+                        )], dtype=DTYPE))
 
+        if goal_point is not None:
+            goal_point_shapely = shapely.Point(goal_point.x, goal_point.y)
+            if local_path_buffer.intersects(goal_point_shapely.buffer(0.1)):
+                collision_points = np.append(collision_points, np.array(
+                    [(goal_point.x, goal_point.y, goal_point.z, 0.0, 0.0, 0.0,
+                      self.braking_safety_distance_goal, np.inf, 1
+                    )], dtype=DTYPE))
         # TODO 9 (lesson 7): add stop line collision points for red traffic lights
 
         # Publish the collision points (an empty array means no collision points on the path)
