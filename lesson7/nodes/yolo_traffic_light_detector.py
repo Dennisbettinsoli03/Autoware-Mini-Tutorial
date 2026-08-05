@@ -124,9 +124,12 @@ class YoloTrafficLightDetector:
         # used in calculate_roi_coordinates to filter out only relevant traffic lights
         stop_line_ids_on_path = []
 
-        # TODO 1: If the local path has waypoints, create a shapely LineString from them
-        #         and collect the ids of the stop lines that intersect with it
-        #         into stop_line_ids_on_path.
+        # Convert the local_path_msg.waypoints to a shapely LineString and check for intersections with the stop lines.
+        if local_path_msg.waypoints:
+            path_linestring = shapely.LineString([(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints])
+            for stop_line in self.stop_lines.items():
+                if shapely.intersects(path_linestring, stop_line[1]):
+                    stop_line_ids_on_path.append(stop_line[0])
 
         with self.lock:
             self.stop_line_ids_on_path = stop_line_ids_on_path
@@ -167,13 +170,21 @@ class YoloTrafficLightDetector:
 
         if stop_line_ids_on_path:
 
-            # TODO 2: Extract the transform between transform_to_frame and transform_from_frame
-            #         at image_time_stamp using self.tf_buffer, then calculate the map ROIs:
-
+            # Use the tf_buffer to lookup the transform from the map frame to the camera frame at the image_time_stamp.
+            try:
+                transform = self.tf_buffer.lookup_transform(transform_to_frame, transform_from_frame, image_time_stamp, rospy.Duration(self.transform_timeout))
+            except (tf2_ros.TransformException, rospy.ROSTimeMovedBackwardsException) as e:
+                rospy.logwarn("%s - %s", rospy.get_name(), e)
+                return
+            map_rois = self.calculate_roi_coordinates(stop_line_ids_on_path, transform)
             if map_rois:
-                # TODO 4: Run the YOLO model on the image to get yolo_rois, classes and scores,
-                #         then match them with map_rois:
-                pass
+                # Use the YOLO model to predict the traffic light classes and bounding boxes in the image.
+                yolo_rois, classes, scores = self.yolo_model.predict(image)
+                # keep only the main traffic light classes, discard arrow-specific detections
+                mask = classes < 4
+                yolo_rois, classes, scores = yolo_rois[mask], classes[mask], scores[mask]
+                tfl_results, match_dict = self.match_map_and_yolo_rois(map_rois, yolo_rois, classes, scores)
+                tfl_status.statuses.extend(tfl_results)
 
         self.tfl_status_pub.publish(tfl_status)
 
@@ -190,10 +201,11 @@ class YoloTrafficLightDetector:
                 for x, y, z in traffic_light_coords:
                     point_map = Point(x=x, y=y, z=z)
 
-                    # TODO 3: Transform point_map to the camera frame (point_camera),
-                    #         project it to pixel coordinates (u, v) using the camera model
-                    #         and break out of the loop if the point is outside the image
-                    #         or behind the camera.
+                    # Use the do_transform_point function to transform the traffic light corner coordinates from the map frame to the camera frame using the provided transform. Then, project the transformed 3D point to pixel coordinates using the camera model. If the point is behind the camera or outside the image boundaries, break out of the loop for this traffic light. Otherwise, calculate the extent of the ROI in pixels based on the distance from the camera and add the pixel coordinates to the lists us and vs.
+                    point_camera = do_transform_point(PointStamped(point=point_map), transform).point
+                    u, v = self.camera_model.project3dToPixel((point_camera.x, point_camera.y, point_camera.z))
+                    if point_camera.z<0 or u >= self.camera_model.width or v >= self.camera_model.height:
+                        break
 
                     # convert the extent in meters to extent in pixels
                     extent_x_px = self.camera_model.fx() * self.roi_width_extent / point_camera.z
@@ -221,7 +233,6 @@ class YoloTrafficLightDetector:
                     continue
 
                 rois.append([stop_line_id, traffic_light_id, min_u, max_u, min_v, max_v])
-
         return rois
 
     def match_map_and_yolo_rois(self, map_rois, yolo_rois, yolo_classes, yolo_scores):
@@ -232,10 +243,12 @@ class YoloTrafficLightDetector:
         for stop_line_id, traffic_light_id, x1_map, x2_map, y1_map, y2_map in map_rois:
             matched_roi = None
 
-            # TODO 4: Find the YOLO detection that best matches this map ROI.
-            #         Loop over the YOLO detections, calculate the IOU between the map ROI
-            #         and the YOLO box, skip matches with IOU below self.iou_threshold and
-            #         keep the one with the highest IOU:
+            # for every yolo roi, calculate the iou with the map roi and keep the one with the highest iou
+            for idx, (cls, score, yolo_roi) in enumerate(zip(yolo_classes, yolo_scores, yolo_rois)):
+                iou_score = self.calculate_iou(np.array([[x1_map, y1_map, x2_map, y2_map]]), yolo_roi[np.newaxis, :])[0][0]
+                if iou_score >= self.iou_threshold:
+                    if matched_roi is None or iou_score > matched_roi[1]:
+                        matched_roi = (cls, score, yolo_roi, idx)
 
             tfl_result = StopLineStatus()
             tfl_result.traffic_light_id = traffic_light_id
@@ -248,10 +261,9 @@ class YoloTrafficLightDetector:
                 match_dict[traffic_light_id] = None
             else:
                 # yolo ROI and map ROI were matched
-                # TODO 4: Fill in the status using CLASS_TO_TLRESULT
-                #         and the status_text using CLASS_TO_STRING.
                 match_dict[traffic_light_id] = matched_roi
-
+                tfl_result.status = CLASS_TO_TLRESULT[matched_roi[0]]
+                tfl_result.status_text = CLASS_TO_STRING[matched_roi[0]]
             tfl_results.append(tfl_result)
 
         return tfl_results, match_dict
