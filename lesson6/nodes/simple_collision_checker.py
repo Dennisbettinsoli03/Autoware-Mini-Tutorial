@@ -124,12 +124,11 @@ class SimpleCollisionChecker:
                       self.braking_safety_distance_goal, np.inf, 1
                     )], dtype=DTYPE))
         # add stop line collision points for red traffic lights
-        # stop line collision points for red traffic lights
         for stop_line_id, stop_line in self.stop_lines_with_traffic_lights.items():
             if self.stopline_statuses.get(stop_line_id) == StopLineStatus.STATUS_STOP:
-                if local_path_buffer.intersects(stop_line):
-                    intersection = local_path_buffer.intersection(stop_line)
-                    for x, y in intersection.coords:
+                if local_path_linestring.intersects(stop_line):
+                    intersection = local_path_linestring.intersection(stop_line)
+                    for x, y in shapely.get_coordinates(intersection):
                         collision_points = np.append(collision_points, np.array([(
                             x, y, 0.0,
                             0.0, 0.0, 0.0,
@@ -145,20 +144,23 @@ class SimpleCollisionChecker:
             collision_points_msg = PointCloud2()
         collision_points_msg.header = msg.header
         self.collision_points_pub.publish(collision_points_msg)
-    def get_traffic_light_stop_lines(self, lanelet2_map):
-            """
-            Iterate over all regulatory elements with subtype traffic_light and extract the stop lines.
-            :param lanelet2_map: lanelet2 map
-            :return: {stop_line_id: stop line as a shapely LineString, ...}
-            """
-            stop_lines = {}
-            for reg_el in lanelet2_map.regulatoryElementLayer:
-                if reg_el.attributes["subtype"] == "traffic_light":
-                    # ref_line is the stop line and there is only 1 stop line per traffic light reg_el
-                    stop_line = reg_el.parameters["ref_line"][0]
-                    stop_lines[stop_line.id] = shapely.LineString([(p.x, p.y) for p in stop_line])
-    
-            return stop_lines
+  
+    @staticmethod
+    def get_traffic_light_stop_lines(lanelet2_map):
+        """
+        Iterate over all regulatory elements with subtype traffic_light and extract the stop lines.
+        :param lanelet2_map: lanelet2 map
+        :return: {stop_line_id: stop line as a shapely LineString, ...}
+        """
+        stop_lines = {}
+        for reg_el in lanelet2_map.regulatoryElementLayer:
+            if reg_el.attributes["subtype"] == "traffic_light":
+                # ref_line is the stop line and there is only 1 stop line per traffic light reg_el
+                stop_line = reg_el.parameters["ref_line"][0]
+                stop_lines[stop_line.id] = shapely.LineString([(p.x, p.y) for p in stop_line])
+
+        return stop_lines
+
     def run(self):
         rospy.spin()
 

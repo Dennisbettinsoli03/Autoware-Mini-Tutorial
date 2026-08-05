@@ -127,9 +127,9 @@ class YoloTrafficLightDetector:
         # Convert the local_path_msg.waypoints to a shapely LineString and check for intersections with the stop lines.
         if local_path_msg.waypoints:
             path_linestring = shapely.LineString([(wp.position.x, wp.position.y) for wp in local_path_msg.waypoints])
-            for stop_line in self.stop_lines.items():
-                if shapely.intersects(path_linestring, stop_line[1]):
-                    stop_line_ids_on_path.append(stop_line[0])
+            for stop_line_id, stop_line in self.stop_lines.items():
+                if shapely.intersects(path_linestring, stop_line):
+                    stop_line_ids_on_path.append(stop_line_id)
 
         with self.lock:
             self.stop_line_ids_on_path = stop_line_ids_on_path
@@ -204,7 +204,8 @@ class YoloTrafficLightDetector:
                     # Use the do_transform_point function to transform the traffic light corner coordinates from the map frame to the camera frame using the provided transform. Then, project the transformed 3D point to pixel coordinates using the camera model. If the point is behind the camera or outside the image boundaries, break out of the loop for this traffic light. Otherwise, calculate the extent of the ROI in pixels based on the distance from the camera and add the pixel coordinates to the lists us and vs.
                     point_camera = do_transform_point(PointStamped(point=point_map), transform).point
                     u, v = self.camera_model.project3dToPixel((point_camera.x, point_camera.y, point_camera.z))
-                    if point_camera.z<0 or u >= self.camera_model.width or v >= self.camera_model.height:
+
+                    if point_camera.z < 0 or u < 0 or u >= self.camera_model.width or v < 0 or v >= self.camera_model.height:
                         break
 
                     # convert the extent in meters to extent in pixels
@@ -242,13 +243,14 @@ class YoloTrafficLightDetector:
         # for every map roi
         for stop_line_id, traffic_light_id, x1_map, x2_map, y1_map, y2_map in map_rois:
             matched_roi = None
+            max_iou = 0.0
 
             # for every yolo roi, calculate the iou with the map roi and keep the one with the highest iou
             for idx, (cls, score, yolo_roi) in enumerate(zip(yolo_classes, yolo_scores, yolo_rois)):
                 iou_score = self.calculate_iou(np.array([[x1_map, y1_map, x2_map, y2_map]]), yolo_roi[np.newaxis, :])[0][0]
-                if iou_score >= self.iou_threshold:
-                    if matched_roi is None or iou_score > matched_roi[1]:
-                        matched_roi = (cls, score, yolo_roi, idx)
+                if iou_score >= self.iou_threshold and iou_score > max_iou:
+                    matched_roi = (cls, score, yolo_roi, idx)
+                    max_iou = iou_score
 
             tfl_result = StopLineStatus()
             tfl_result.traffic_light_id = traffic_light_id
