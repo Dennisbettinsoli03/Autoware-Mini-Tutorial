@@ -66,10 +66,16 @@ Your framework from the previous lessons is a simplified one. Remember all limit
 5. Commit and push everything, and be ready to demonstrate your failure cases at the practice session
 
 ##### Failure case 1
-...
+I added a pedestrian who runs across the road at 15 km/h, outside of the crosswalk, timed to cross right as the ego vehicle approaches. The vehicle does not slow down in time and hits the pedestrian. A careful human driver would notice the pedestrian coming from the side and brake early.
+The framework creates a collision point only when the object is already on the local path, and it does not predict where the object will be. A pedestrian crossing quickly is therefore detected too late to brake.
+A possible fix would be to predict object trajectories from their velocity and check for future intersections with the path, instead of reacting only to the current overlap.
 
 ##### Failure case 2
-...
+An ambulance drives along the main road above the speed limit. The ego vehicle approaches the intersection slowly and gets hit from behind by the ambulance, which does not slow down. A careful human driver would notice the ambulance coming and either speed up to clear the intersection or pull over.
+The framework only plans its speed from objects ahead on the local path, so a vehicle coming from behind never becomes a collision point. The car keeps crawling through the intersection and cannot clear it in time.
+A possible fix would be to give the planner awareness of fast traffic approaching from behind or from the side, and adapt the vehicle's behaviour when one is detected.
 
 ##### Failure case 3
-...
+The traffic light turns green as the ego vehicle approaches, then switches back to red about two seconds later, when the car is already close to the stop line. The vehicle does not brake in time and runs the red light.
+The framework only reacts to the light's current state: it starts braking only once the light is already red. By then there isn't enough distance left to stop, so the car crosses on red. A careful human driver would anticipate the change and brake in time.
+A possible fix would be to react to traffic lights earlier — for example, starting to slow down on yellow, or keeping a speed that always allows stopping at an upcoming stop line.
